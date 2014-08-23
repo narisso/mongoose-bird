@@ -1,18 +1,18 @@
 {
-  "name": "mongoose-q",
-  "version": "0.0.10",
-  "description": "kriskowal's Q support for mongoose",
-  "author": "Dongsu Jang <iolothebard@gmail.com>",
+  "name": "mongoose-bird",
+  "version": "0.0.1",
+  "description": "blue bird support for mongoose",
+  "author": "Rafael Almeida <pentateu@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git://git@github.com/iolo/mongoose-q.git"
+    "url": "git://git@github.com:pentateu/mongoose-bird.git"
   },
   "license": "MIT",
   "engines": {
     "node": "~0.10"
   },
   "dependencies": {
-    "q": "~1.0.0",
+    "bluebird": "~2.3.1",
     "mongoose": "~3.8.3"
   },
   "devDependencies": {
@@ -25,5 +25,5 @@
   "directories": {
     "lib": "./lib"
   },
-  "main": "./lib/mongoose_q"
+  "main": "./lib/mongoose_bird"
 }

@@ -1,22 +1,22 @@
-mongoose-q
+mongoose-bird
 ==========
 
-[kriskowal's Q](http://documentup.com/kriskowal/q/) support for [mongoose](http://mongoosejs.com).
+[blue bird](https://github.com/petkaantonov/bluebird) support for [mongoose](http://mongoosejs.com).
 
-for [mongodb native nodejs driver](http://mongodb.github.io/node-mongodb-native/), see [mongo-q](http://github.com/iolo/mongo-q).
+based on [mongoose-2](https://github.com/iolo/mongoose-q).
 
 usage
 -----
 
-* to apply Q with default suffix 'Q':
+* to apply Async with default suffix 'Q':
 
 ```javascript
-var mongoose = require('mongoose-q')(require('mongoose'));
+var mongoose = require('mongoose-bird')(require('mongoose'));
 // verbose way: mongooseQ is unused
 var mongoose = require('mongoose'),
-    mongooseQ = require('mongoose-q')(mongoose)
-// shortest way: mongoose will be loaded by mongoose-q
-var mongoose = require('mongoose-q')();
+    mongooseBird = require('mongoose-bird')(mongoose)
+// shortest way: mongoose will be loaded by mongoose-bird
+var mongoose = require('mongoose-bird')();
 ```
 
 * use Q-applied `model` statics:
