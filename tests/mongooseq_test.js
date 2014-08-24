@@ -1,13 +1,10 @@
 'use strict';
 
-var
-  Promise = require("bluebird"),
-  fixtures = require('./fixtures'),
+var fixtures = require('./fixtures'),
   customMapper = function (name) {
-    return name;
-    //return 'q' + name.charAt(0).toUpperCase() + name.substring(1);
+    return name + 'Async';
   },
-  mongoose = require('../libs/mongoose_bird')(require('mongoose'), {spread: true, mapper: customMapper}),
+  mongoose = require('../libs/mongoose_bird')(require('mongoose')),
   Schema = mongoose.Schema,
   UserSchema = new Schema({
     name: String
@@ -63,7 +60,7 @@ module.exports = {
       fixturesLoader.client.close();
       mongoose.connect('mongodb://localhost/test');
       callback();
-      console.log('clearAndLoad conected');
+      //console.log('clearAndLoad conected');
     });
   },
   tearDown: function (callback) {
@@ -98,48 +95,59 @@ module.exports = {
 
     console.log('test_findById__and__populate');
 
-    PostModel.findById(fixtures.posts.p1._id)
+    PostModel.findByIdAsync(fixtures.posts.p1._id)
       .then(function (result) {
-        console.log('test_findById__and__populate -> Model.findById-->', result);
         test.ok(result);
-        var popResult = result.populate('author');
-        console.log('popResult ' + popResult);
-        return popResult;
+        return result.populateAsync('author');
       })
       .then(function (result) {
         console.log('test_findById__and__populate -> Model#populate-->', result);
         test.ok(result);
         return result;
       })
-      .then(test.done)
+      .then(function(result){
+        return test.done();
+      })
       .catch(test.ifError);
   },
   test_findById__and__exec: function (test) {
     PostSchema.__test = test;
-    PostModel.findById(fixtures.posts.p1._id).exec()
+    PostModel
+      .findById(fixtures.posts.p1._id)
+      .execAsync()
       .then(function (result) {
         console.log('test_findById__and__exec -> Model.findById and Query#exec-->', result);
         test.ok(result);
+
+        return result;
       })
-      .then(test.done)
-      .catch(test.ifError);
+      .then(function (result) {
+        test.done();
+      })
+      .catch(function(err){
+        test.ifError(err);
+      });
   },
   test_create: function (test) {
-    UserModel.create({name:'hello'}, {name:'world'})
+    UserModel
+      .createAsync({name:'hello'}, {name:'world'})
       .then(function (createdUsers) {
         console.log('test_create -> created users:', arguments);
         test.equal(createdUsers.length, 2);
         test.equal(createdUsers[0].name, 'hello');
         test.equal(createdUsers[1].name, 'world');
       })
-      .then(test.done)
+      .then(function (result) {
+        test.done();
+      })
       .catch(function (err) {
         console.log(err);
         test.ifError(err);
       });
   },
   test_create_spread: function (test) {
-    UserModel.create({name:'hello spread'}, {name:'world spread'})
+    UserModel
+      .createAsync({name:'hello spread'}, {name:'world spread'})
       .spread(function (createdUser1, createdUser2) {
         console.log('created users:', arguments);
         test.equal(createdUser1.name, 'hello spread');
@@ -153,7 +161,8 @@ module.exports = {
   },
   test_update_spread: function (test) {
     PostSchema.__test = test;
-    PostModel.update({_id: fixtures.posts.p1._id}, { title: 'changed'})
+    PostModel
+      .updateAsync({_id: fixtures.posts.p1._id}, { title: 'changed'})
       .spread(function (affectedRows, raw) {
         console.log('Model.update-->', arguments);
         test.equal(affectedRows, 1);
@@ -171,21 +180,7 @@ module.exports = {
     post.title = 'new-title';
     post.author = fixtures.users.u1._id;
     test.ok(post.isNew);
-// this works!
-//    post.save(function (err, result, affectedRows) {// with 'spread' options
-//      test.ifError(err);
-//      console.log('Model#save-->', arguments);
-//      test.ok(result);
-//      test.equal(affectedRows, 1);
-//      test.ok(!result.isNew);
-//      test.ok(result._id);
-//      test.equal(result.title, 'new-title');
-//      test.equal(result.author.toString(), fixtures.users.u1._id.toString());
-//      test.done();
-//    });
-// this works!
-//    Q.ninvoke(post, 'save')
-    post.save()
+    post.saveAsync()
         .spread(function (result, affectedRows) {// with 'spread' options
         console.log('Model#save-->', arguments);
         test.ok(result);
@@ -202,9 +197,10 @@ module.exports = {
       });
   },
   test_issue2: function (test) {
-    UserModel.findById(fixtures.users.u1._id)
+    UserModel
+      .findByIdAsync(fixtures.users.u1._id)
       .then(function (user) {
-        return [ user, PostModel.find().populate('author').qExec() ];
+        return [ user, PostModel.find().populate('author').execAsync() ];
       })
       .spread(function (user, users) {
         console.log('user:', user);
@@ -212,7 +208,9 @@ module.exports = {
         test.ok(user);
         test.ok(users);
       })
-      .then(test.done)
+      .then(function (result) {
+        test.done();
+      })
       .catch(function (err) {
         console.log(err);
         test.ifError(err);

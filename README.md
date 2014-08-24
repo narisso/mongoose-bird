@@ -5,10 +5,24 @@ mongoose-bird
 
 based on [mongoose-2](https://github.com/iolo/mongoose-q).
 
+
+What is it?
+-----
+mongoose-bird uses the bluebird's Promise.promisifyAll function which will
+add a Async function for each function on mongoose :
+ * mongoose.Model
+ * mongoose.Model.prototype
+ * mongoose.Query.prototype
+
+So all mongoose-bird does it to call:
+```javascript
+ Promise.promisifyAll(mongoose.Model);
+ Promise.promisifyAll(mongoose.Model.prototype);
+ Promise.promisifyAll(mongoose.Query.prototype);
+```
+
 usage
 -----
-
-* to apply Async with default suffix 'Q':
 
 ```javascript
 var mongoose = require('mongoose-bird')(require('mongoose'));
@@ -19,90 +33,53 @@ var mongoose = require('mongoose'),
 var mongoose = require('mongoose-bird')();
 ```
 
-* use Q-applied `model` statics:
+* use Async `model` statistics functions:
 
 ```javascript
-SomeModel.findByIdQ(....blahblah...)
+SomeModel.findByIdAsync(....blahblah...)
   .then(function (result) { ... })
-  .fail(function (err) { ... })
-  .done();
+  .catch(function (err) { ... });
 ```
 
-* use Q-applied `model` methods:
+* use Async `model` functions:
 
 ```javascript
 var someModel = new SomeModel(...);
-someModel.populateQ()
+someModel.populateAsync()
   .then(function (result) { ... })
-  .fail(function (err) { ... })
-  .done();
+  .catch(function (err) { ... });
 ```
 
-* use Q-applied `query` methods:
+* use Async `query` methods:
 
 ```javascript
 SomeModel.find(...).where(...).skip(...).limit(...).sort(...).populate(...)
-  .execQ() // no 'Q' suffix for model statics except for execQ()
+  .execAsync() // no 'Async' suffix for model statics except for execAsync()
   .then(function (result) { ... })
-  .fail(function (err) { ... })
-  .done();
+  .catch(function (err) { ... });
 ```
 
-* to apply Q with custom `suffix`/`prefix`:
+* to use Async with `spread`:
 
 ```javascript
-var mongoose = require('mongoose-q')(require('mongoose'), {prefix:'promiseOf_', suffix:'_withQ'});
-SomeModel.promiseOf_findAndUpdate_withQ(...)
-  .then(function (result) { ... })
-  .fail(function (err) { ... })
-  .done();
-```
-
-* to apply Q with custom name `mapper`:
-
-```javascript
-function customMapper(name) {
-  return 'q' + name.charAt(0).toUpperCase() + name.substring(1);
-}
-var mongoose = require('mongoose-q')(require('mongoose'), {mapper:customMapper});
-SomeModel.qFindAndUpdate(...)
-  .then(function (result) { ... })
-  .fail(function (err) { ... })
-  .done();
-```
-
-* to apply Q with `spread`:
-
-```javascript
-var mongoose = require('mongoose-q')(require('mongoose'), {spread:true});
-SomeModel.updateQ(...)
+var mongoose = require('mongoose-bird')(require('mongoose'));
+SomeModel.updateAsync(...)
   .spread(function (affectedRows, raw) { ... })
-  .fail(function (err) { ... })
-  .done();
-SomeModel.updateQ(...)
-  .then(function (result) { var affectedRows = result[0], raw = result[1]; ... })
-  .fail(function (err) { ... })
-  .done();
+  .catch(function (err) { ... });
 ...
 var model = new SomeModel();
 ...
-model.saveQ()
+model.saveAsync()
   .spread(function (savedDoc, affectedRows) { ... })
-  .fail(function (err) { ... })
-  .done();
+  .catch(function (err) { ... });
 ...
-model.saveQ()
-  .then(function (result) { var savedDoc = result[0], affectedRows = result[1]; ... })
-  .fail(function (err) { ... })
-  .done();
 ```
-> NOTE: without `spread` option(by default), you can access only the first result with `then`!!
 
-* to define custom statics/instance methods using Q
+* to define custom statics/instance methods using Async
 
 ```javascript
 SomeSchema.statics.findByName = function (name) {
-  return this.findQ({name: name}); // NOTE: returns Promise object.
+  return this.findAsync({name: name}); // NOTE: returns Promise object.
 };
 ...
 var SomeModel = mongoose.model('Some', SomeSchema);
@@ -110,6 +87,6 @@ SomeModel.findByName('foo').then(function(result) {
   console.log(result);
 });
 ```
-> NOTE: this is not a feature of mongoose-q
+> NOTE: this is not a feature of mongoose-bird
 
 That's all folks!

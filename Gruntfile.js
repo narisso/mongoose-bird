@@ -4,7 +4,8 @@ module.exports = function (grunt) {
     jshint: {
       options: {
         devel: true,
-        node: true
+        node: true,
+        reporter: 'verbose'
       },
       all: ['libs/**/*.js']
     },
