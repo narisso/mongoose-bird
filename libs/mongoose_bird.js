@@ -1,7 +1,7 @@
 'use strict';
 
 var
-  Q = require('q'),
+  Promise = require("bluebird"),
   MONGOOSE_MODEL_STATICS = [
     // mongoose.Model static
     'remove', 'ensureIndexes', 'find', 'findById', 'findOne', 'count', 'distinct',
@@ -46,27 +46,61 @@ function qualify(obj, funcNames, funcNameMapper, spread) {
       DEBUG && console.warn('***skip*** function not found:', funcName);
       return;
     }
-    var mappedFuncName = funcNameMapper(funcName);
-    DEBUG && console.log('wrap function:', funcName, '-->', mappedFuncName);
-    obj[mappedFuncName] = function () {
-      var d = Q.defer();
+    //var mappedFuncName = funcName;//funcNameMapper(funcName);
+    //DEBUG && console.log('wrap function:', funcName, '-->', mappedFuncName);
+
+    var originalFunc = obj[funcName];
+
+    var newFunc = function () {
+      var d = Promise.defer();
       var args = apslice.call(arguments);
       args.push(function (err, result) {
         if (err) {
+          console.log('rejecting func ' + funcName + ' err: ' + err);
           return d.reject(err);
         }
         // with 'spread' option: returns 'all' result with 'spread' only for multiple result
         if (spread && arguments.length > 2) {
+          console.log('resolving func with spread -> ' + funcName + ' result: ' + result);
           return d.resolve(apslice.call(arguments, 1));
         }
         // without 'spread' option: returns the 'first' result only and ignores following result
+        console.log('resolving func NO spread -> ' + funcName + ' result: ' + result);
         return d.resolve(result);
       });
+      //TODO: Try to fix this by using a observer on the obj
       // fix https://github.com/iolo/mongoose-q/issues/1
       // mongoose patches some instance methods after instantiation. :(
-      this[funcName].apply(this, args);
-      return d.promise;
+
+
+      var promise = d.promise;
+      var originalResult = originalFunc.apply(this, args);
+
+      function wrapFunction(promise, func, debugMsg){
+        return function(){
+          if(debugMsg){
+            //console.log(debugMsg);
+          }
+          var args = apslice.call(arguments);
+          return func.apply(promise, args);
+        };
+      }
+
+      if(originalResult){
+        originalResult.then   = wrapFunction(promise, promise.then, 'debug on promise.then');
+        originalResult.spread = wrapFunction(promise, promise.spread, 'debug on promise.spread');
+        originalResult.catch  = wrapFunction(promise, promise.catch, 'debug on promise.catch');
+        //originalResult.done   = wrapFunction(promise, promise.then, 'debug on promise.done');
+        return originalResult;
+      }
+      else{
+        //promise.done = wrapFunction(promise, promise.then, 'debug on promise.done func: ');
+        return promise;
+      }
     };
+
+    obj[funcName] = newFunc;
+
   });
 }
 
@@ -81,7 +115,7 @@ function qualify(obj, funcNames, funcNameMapper, spread) {
  * @param {boolean} [options.spread=false]
  * @returns {mongoose.Mongoose} the same mongoose instance, for convenince
  */
-function mongooseQ(mongoose, options) {
+function promisify(mongoose, options) {
   mongoose = mongoose || require('mongoose');
   options = options || {};
   var prefix = options.prefix || '';
@@ -106,5 +140,5 @@ function mongooseQ(mongoose, options) {
   return mongoose;
 }
 
-module.exports = mongooseQ;
+module.exports = promisify;
 module.exports.qualify = qualify;

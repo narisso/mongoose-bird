@@ -1,12 +1,13 @@
 'use strict';
 
 var
-  Q = require('q'),
+  Promise = require("bluebird"),
   fixtures = require('./fixtures'),
   customMapper = function (name) {
-    return 'q' + name.charAt(0).toUpperCase() + name.substring(1);
+    return name;
+    //return 'q' + name.charAt(0).toUpperCase() + name.substring(1);
   },
-  mongoose = require('../libs/mongoose_q')(require('mongoose'), {spread: true, mapper: customMapper}),
+  mongoose = require('../libs/mongoose_bird')(require('mongoose'), {spread: true, mapper: customMapper}),
   Schema = mongoose.Schema,
   UserSchema = new Schema({
     name: String
@@ -55,10 +56,14 @@ module.exports = {
   setUp: function (callback) {
     var fixturesLoader = require('pow-mongodb-fixtures').connect('test');
     fixturesLoader.clearAndLoad(fixtures, function (err) {
-      if (err) throw err;
+      if (err) {
+        console.log('error on clearAndLoad err: ' + err);
+        throw err;
+      }
       fixturesLoader.client.close();
       mongoose.connect('mongodb://localhost/test');
       callback();
+      console.log('clearAndLoad conected');
     });
   },
   tearDown: function (callback) {
@@ -67,7 +72,7 @@ module.exports = {
   },
   test_modelStatics: function (test) {
     MONGOOSE_MODEL_STATICS.forEach(function (funcName) {
-      console.log(funcName);
+      console.log('test_modelStatics: ' + funcName);
       test.equal(typeof UserModel[customMapper(funcName)], 'function');
     });
     test.done();
@@ -75,7 +80,7 @@ module.exports = {
   test_modelMethods: function (test) {
     var model = new UserModel();
     MONGOOSE_MODEL_METHODS.forEach(function (funcName) {
-      console.log(funcName);
+      console.log('test_modelMethods: ' + funcName);
       test.equal(typeof model[customMapper(funcName)], 'function');
     });
     test.done();
@@ -83,73 +88,82 @@ module.exports = {
   test_queryInstances: function (test) {
     var query = UserModel.find();
     MONGOOSE_QUERY_METHODS.forEach(function (funcName) {
-      console.log(funcName);
+      console.log('test_queryInstances: ' + funcName);
       test.equal(typeof query[customMapper(funcName)], 'function');
     });
     test.done();
   },
   test_findById__and__populate: function (test) {
     PostSchema.__test = test;
-    PostModel.qFindById(fixtures.posts.p1._id)
+
+    console.log('test_findById__and__populate');
+
+    PostModel.findById(fixtures.posts.p1._id)
       .then(function (result) {
-        console.log('Model.findById-->', result);
+        console.log('test_findById__and__populate -> Model.findById-->', result);
         test.ok(result);
-        return result.qPopulate('author');
+        var popResult = result.populate('author');
+        console.log('popResult ' + popResult);
+        return popResult;
       })
       .then(function (result) {
-        console.log('Model#populate-->', result);
+        console.log('test_findById__and__populate -> Model#populate-->', result);
         test.ok(result);
+        return result;
       })
-      .fail(test.ifError)
-      .done(test.done);
+      .then(test.done)
+      .catch(test.ifError);
   },
   test_findById__and__exec: function (test) {
     PostSchema.__test = test;
-    PostModel.findById(fixtures.posts.p1._id).qExec()
+    PostModel.findById(fixtures.posts.p1._id).exec()
       .then(function (result) {
-        console.log('Model.findById and Query#exec-->', result);
+        console.log('test_findById__and__exec -> Model.findById and Query#exec-->', result);
         test.ok(result);
       })
-      .fail(test.ifError)
-      .done(test.done);
+      .then(test.done)
+      .catch(test.ifError);
   },
   test_create: function (test) {
-    UserModel.qCreate({name:'hello'}, {name:'world'})
+    UserModel.create({name:'hello'}, {name:'world'})
       .then(function (createdUsers) {
-        console.log('created users:', arguments);
+        console.log('test_create -> created users:', arguments);
         test.equal(createdUsers.length, 2);
         test.equal(createdUsers[0].name, 'hello');
         test.equal(createdUsers[1].name, 'world');
       })
-      .fail(function (err) {
+      .then(test.done)
+      .catch(function (err) {
         console.log(err);
         test.ifError(err);
-      })
-      .done(test.done);
+      });
   },
   test_create_spread: function (test) {
-    UserModel.qCreate({name:'hello spread'}, {name:'world spread'})
+    UserModel.create({name:'hello spread'}, {name:'world spread'})
       .spread(function (createdUser1, createdUser2) {
         console.log('created users:', arguments);
         test.equal(createdUser1.name, 'hello spread');
         test.equal(createdUser2.name, 'world spread');
       })
-      .fail(function (err) {
+      .then(test.done)
+      .catch(function (err) {
         console.log(err);
         test.ifError(err);
-      })
-      .done(test.done);
+      });
   },
   test_update_spread: function (test) {
     PostSchema.__test = test;
-    PostModel.qUpdate({_id: fixtures.posts.p1._id}, { title: 'changed'})
+    PostModel.update({_id: fixtures.posts.p1._id}, { title: 'changed'})
       .spread(function (affectedRows, raw) {
         console.log('Model.update-->', arguments);
         test.equal(affectedRows, 1);
         test.ok(raw);
       })
-      .fail(test.ifError)
-      .done(test.done);
+      .then(test.done)
+      .catch(function (err) {
+        console.log(err);
+        test.ifError(err);
+      });
   },
   test_save: function (test) {
     PostSchema.__test = test;
@@ -171,8 +185,8 @@ module.exports = {
 //    });
 // this works!
 //    Q.ninvoke(post, 'save')
-    post.qSave()
-      .spread(function (result, affectedRows) {// with 'spread' options
+    post.save()
+        .spread(function (result, affectedRows) {// with 'spread' options
         console.log('Model#save-->', arguments);
         test.ok(result);
         test.equal(affectedRows, 1);
@@ -181,11 +195,14 @@ module.exports = {
         test.equal(result.title, 'new-title');
         test.equal(result.author.toString(), fixtures.users.u1._id.toString());
       })
-      .fail(test.ifError)
-      .done(test.done);
+      .then(test.done)
+      .catch(function (err) {
+        console.log(err);
+        test.ifError(err);
+      });
   },
   test_issue2: function (test) {
-    UserModel.qFindById(fixtures.users.u1._id)
+    UserModel.findById(fixtures.users.u1._id)
       .then(function (user) {
         return [ user, PostModel.find().populate('author').qExec() ];
       })
@@ -195,10 +212,10 @@ module.exports = {
         test.ok(user);
         test.ok(users);
       })
-      .fail(function (err) {
+      .then(test.done)
+      .catch(function (err) {
         console.log(err);
         test.ifError(err);
-      })
-      .done(test.done);
+      });
   }
 };
