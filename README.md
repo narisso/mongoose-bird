@@ -3,7 +3,7 @@ mongoose-bird
 
 [blue bird](https://github.com/petkaantonov/bluebird) support for [mongoose](http://mongoosejs.com).
 
-based on [mongoose-2](https://github.com/iolo/mongoose-q).
+based on [mongoose-q](https://github.com/iolo/mongoose-q).
 
 
 What is it?
